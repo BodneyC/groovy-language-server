@@ -107,11 +107,7 @@ public class CompilationUnitFactory implements ICompilationUnitFactory {
 		CompilerConfiguration config = new CompilerConfiguration();
 
 		List<String> classpathList = new ArrayList<>();
-		try {
-			getClasspathList(classpathList);
-		} catch (Exception e) {
-			System.err.println(classpathList);
-		}
+        getClasspathList(classpathList);
 		config.setClasspathList(classpathList);
 
 		return config;
@@ -134,7 +130,7 @@ public class CompilationUnitFactory implements ICompilationUnitFactory {
 		return classpath;
 	}
 
-	protected void getClasspathList(List<String> result) throws Exception {
+	protected void getClasspathList(List<String> result) {
 		if (additionalClasspathList == null) {
 			additionalClasspathList = new ArrayList<String>();
 		}
