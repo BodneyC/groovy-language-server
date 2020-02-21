@@ -1,3 +1,16 @@
+# Purpose of Fork
+
+The purpose of this fork is to add some default classes to the classpath, for example... the groovy jars.
+
+To install the relevant dependencies:
+
+    cd ./mvn-project
+    mvn dependency:resolve
+
+
+If you use only gradle, do the same, but gradle-ish.
+
+
 # Groovy Language Server
 
 A [language server](https://microsoft.github.io/language-server-protocol/) for [Groovy](http://groovy-lang.org/).

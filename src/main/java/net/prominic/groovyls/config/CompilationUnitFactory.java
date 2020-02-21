@@ -107,16 +107,40 @@ public class CompilationUnitFactory implements ICompilationUnitFactory {
 		CompilerConfiguration config = new CompilerConfiguration();
 
 		List<String> classpathList = new ArrayList<>();
-		getClasspathList(classpathList);
+		try {
+			getClasspathList(classpathList);
+		} catch (Exception e) {
+			System.err.println(classpathList);
+		}
 		config.setClasspathList(classpathList);
 
 		return config;
 	}
 
-	protected void getClasspathList(List<String> result) {
-		if (additionalClasspathList == null) {
-			return;
+	protected static void searchRecursive(final File root, final String patt, List<String> result) {
+		for (final File f : root.listFiles()) {
+			if (f.isDirectory())
+				searchRecursive(f, patt, result);
+			if (f.isFile() && f.getName().matches(patt))
+				result.add(f.getAbsolutePath());
 		}
+	}
+
+	protected List<String> getFromMvnRepo(String dir) {
+		List<String> classpath = new ArrayList<>();
+		String home = System.getenv("HOME");
+		File repoDir = new File(home + "/.m2/repository/" + dir);
+		searchRecursive(repoDir, ".*\\.jar", classpath);
+		return classpath;
+	}
+
+	protected void getClasspathList(List<String> result) throws Exception {
+		if (additionalClasspathList == null) {
+			additionalClasspathList = new ArrayList<String>();
+		}
+
+		additionalClasspathList.addAll(getFromMvnRepo("junit/junit/4.13"));
+		additionalClasspathList.addAll(getFromMvnRepo("org/codehaus/groovy"));
 
 		for (String entry : additionalClasspathList) {
 			boolean mustBeDirectory = false;
