@@ -33,9 +33,9 @@ const RELOAD_WINDOW_MESSAGE =
   "To apply new settings for Groovy, please reload the window.";
 const STARTUP_ERROR = "The Groovy extension failed to start.";
 const LABEL_RELOAD_WINDOW = "Reload Window";
-let extensionContext: vscode.ExtensionContext;
-let languageClient: LanguageClient;
-let javaPath: string;
+let extensionContext: vscode.ExtensionContext|null = null;
+let languageClient: LanguageClient|null = null;
+let javaPath: string|null = null;
 
 function onDidChangeConfiguration(event: vscode.ConfigurationChangeEvent) {
   if (event.affectsConfiguration("groovy.java.home")) {
@@ -88,40 +88,22 @@ export function deactivate() {
 }
 
 function startLanguageServer() {
-  if (!extensionContext) {
-    //something very bad happened!
-    return;
-  }
-  /*if (vscode.workspace.workspaceFolders === undefined) {
-    vscode.window
-      .showInformationMessage(
-        MISSING_WORKSPACE_ROOT_ERROR,
-        LABEL_OPEN_FOLDER,
-        LABEL_OPEN_WORKSPACE
-      )
-      .then(action => {
-        switch (action) {
-          case LABEL_OPEN_WORKSPACE: {
-            vscode.commands.executeCommand("workbench.action.openWorkspace");
-            break;
-          }
-          case LABEL_OPEN_FOLDER: {
-            vscode.commands.executeCommand("workbench.action.files.openFolder");
-            break;
-          }
-        }
-      });
-    return;
-  }*/
-  if (!javaPath) {
-    vscode.window.showErrorMessage(MISSING_JAVA_ERROR);
-    return;
-  }
-
   vscode.window.withProgress(
     { location: vscode.ProgressLocation.Window },
     progress => {
       return new Promise((resolve, reject) => {
+        if(!extensionContext)
+        {
+          //something very bad happened!
+          resolve();
+          vscode.window.showErrorMessage(STARTUP_ERROR);
+          return;
+        }
+        if (!javaPath) {
+          resolve();
+          vscode.window.showErrorMessage(MISSING_JAVA_ERROR);
+          return;
+        }
         progress.report({ message: INITIALIZING_MESSAGE });
         let clientOptions: LanguageClientOptions = {
           documentSelector: [{ scheme: "file", language: "groovy" }],
