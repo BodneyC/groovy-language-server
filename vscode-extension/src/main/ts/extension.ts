@@ -23,22 +23,25 @@ import * as vscode from "vscode";
 import {
   LanguageClient,
   LanguageClientOptions,
-  Executable
+  Executable,
 } from "vscode-languageclient";
 
 const MISSING_JAVA_ERROR =
   "Could not locate valid JDK. To configure JDK manually, use the groovy.java.home setting.";
+const INVALID_JAVA_ERROR =
+  "The groovy.java.home setting does not point to a valid JDK.";
 const INITIALIZING_MESSAGE = "Initializing Groovy language server...";
 const RELOAD_WINDOW_MESSAGE =
   "To apply new settings for Groovy, please reload the window.";
 const STARTUP_ERROR = "The Groovy extension failed to start.";
 const LABEL_RELOAD_WINDOW = "Reload Window";
-let extensionContext: vscode.ExtensionContext|null = null;
-let languageClient: LanguageClient|null = null;
-let javaPath: string|null = null;
+let extensionContext: vscode.ExtensionContext | null = null;
+let languageClient: LanguageClient | null = null;
+let javaPath: string | null = null;
 
 function onDidChangeConfiguration(event: vscode.ConfigurationChangeEvent) {
   if (event.affectsConfiguration("groovy.java.home")) {
+    javaPath = findJava();
     //we're going to try to kill the language server and then restart
     //it with the new settings
     restartLanguageServer();
@@ -61,7 +64,7 @@ function restartLanguageServer() {
       //this shouldn't happen, but if it does, the user can manually restart
       vscode.window
         .showWarningMessage(RELOAD_WINDOW_MESSAGE, LABEL_RELOAD_WINDOW)
-        .then(action => {
+        .then((action) => {
           if (action === LABEL_RELOAD_WINDOW) {
             vscode.commands.executeCommand("workbench.action.reloadWindow");
           }
@@ -90,10 +93,9 @@ export function deactivate() {
 function startLanguageServer() {
   vscode.window.withProgress(
     { location: vscode.ProgressLocation.Window },
-    progress => {
+    (progress) => {
       return new Promise((resolve, reject) => {
-        if(!extensionContext)
-        {
+        if (!extensionContext) {
           //something very bad happened!
           resolve();
           vscode.window.showErrorMessage(STARTUP_ERROR);
@@ -101,14 +103,21 @@ function startLanguageServer() {
         }
         if (!javaPath) {
           resolve();
-          vscode.window.showErrorMessage(MISSING_JAVA_ERROR);
+          let settingsJavaHome = vscode.workspace
+            .getConfiguration("groovy")
+            .get("java.home") as string;
+          if (settingsJavaHome) {
+            vscode.window.showErrorMessage(INVALID_JAVA_ERROR);
+          } else {
+            vscode.window.showErrorMessage(MISSING_JAVA_ERROR);
+          }
           return;
         }
         progress.report({ message: INITIALIZING_MESSAGE });
         let clientOptions: LanguageClientOptions = {
           documentSelector: [{ scheme: "file", language: "groovy" }],
           synchronize: {
-            configurationSection: "groovy"
+            configurationSection: "groovy",
           },
           uriConverters: {
             code2Protocol: (value: vscode.Uri) => {
@@ -121,18 +130,22 @@ function startLanguageServer() {
               }
             },
             //this is just the default behavior, but we need to define both
-            protocol2Code: value => vscode.Uri.parse(value)
-          }
+            protocol2Code: (value) => vscode.Uri.parse(value),
+          },
         };
         let args = [
           "-jar",
-          path.resolve(extensionContext.extensionPath, "bin", "groovy-language-server-all.jar")
+          path.resolve(
+            extensionContext.extensionPath,
+            "bin",
+            "groovy-language-server-all.jar"
+          ),
         ];
         //uncomment to allow a debugger to attach to the language server
         //args.unshift("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005,quiet=y");
         let executable: Executable = {
           command: javaPath,
-          args: args
+          args: args,
         };
         languageClient = new LanguageClient(
           "groovy",
@@ -140,7 +153,7 @@ function startLanguageServer() {
           executable,
           clientOptions
         );
-        languageClient.onReady().then(resolve, reason => {
+        languageClient.onReady().then(resolve, (reason) => {
           resolve();
           vscode.window.showErrorMessage(STARTUP_ERROR);
         });
